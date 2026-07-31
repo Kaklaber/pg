@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Password Generator</title>
+<meta name="theme-color" content="#20262d">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232a323c'/%3E%3Cpath d='M40 26a8 8 0 1 0-15.5 2.8L16 37.3V44h6.7l2.6-2.6V38h3.4l2.8-2.8A8 8 0 0 0 40 26Zm2 0a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z' fill='%231aa3dd'/%3E%3C/svg%3E">
+<!--
+  Palette: Iranian Colors - https://github.com/nafasebra/iranian-colors
+  Colours inspired by Iran's nature, architecture, food and crafts.
+  Used here (original hex -> value used, lifted for legibility on dark):
+    Lajvard          #0047AB  surface hue (all greys are tinted toward it)
+    Lajvard Firouzeh #007BA7 -> #0b7fb0  primary action (white ink, Lc 76)
+    Firouzeh         #40E0D0 -> #3ee0cf  focus ring, length value, max strength
+    Yashm            #00A86B -> #00d688  strong
+    Zaferani         #F4C430 -> #f4c42f  fair / digits
+    Shangarfi        #E32636 -> #ff8b95  weak
+    Daryaei          #4682B4 -> #a8c6e0  uppercase
+    Goli             #FF69B4 -> #ffb2d9  symbols
+    Noghrei          #C0C0C0 -> #c8cfd6  lowercase
+    Toosi Irani      #708090  muted ink
+  Surfaces are luminance-targeted (panel Y=1.9%, comparable to Discord/VS Code)
+  rather than near-black; an earlier revision sat at Y=0.14% and was unreadable.
+-->
+<style>
+:root{
+--page:#20262d;--panel:#2a323c;--well:#323c48;--ctrl:#3a4654;--ctrl2:#445263;
+--bd:#516175;--bd2:#6b7d92;
+--tx:#eef3f9;--mu:#b9c6d6;--fa:#93a4b8;
+--ac:#0b7fb0;--ach:#0d93cc;--ac2:#3ee0cf;
+--lo:#c8cfd6;--up:#a8c6e0;--nu:#f4c42f;--sy:#ffb2d9;
+--weak:#ff8b95;--fair:#f4c42f;--good:#00d688;--best:#3ee0cf;
+--r:12px}
+*{box-sizing:border-box}
+html,body{background:var(--page)}
+body{margin:0;padding:24px 16px;min-height:100vh;display:flex;align-items:center;
+justify-content:center;color:var(--tx);line-height:1.5;
+font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+.card{width:100%;max-width:480px;background:var(--panel);border:1px solid var(--bd);
+border-radius:var(--r);padding:24px 22px}
+h1{margin:0 0 18px;font-size:20px;font-weight:700}
+.row{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+label[for=len]{font-size:14px;color:var(--mu)}
+#val{min-width:2.6em;text-align:center;font-size:14px;font-weight:700;color:var(--ac2);
+background:var(--well);border:1px solid var(--bd);border-radius:8px;padding:4px 8px;
+font-variant-numeric:tabular-nums}
+input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:24px;margin:0;
+background:none;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:99px;
+background:linear-gradient(90deg,var(--ac) 0 var(--p,20%),var(--ctrl2) var(--p,20%) 100%)}
+input[type=range]::-moz-range-track{height:6px;border-radius:99px;
+background:linear-gradient(90deg,var(--ac) 0 var(--p,20%),var(--ctrl2) var(--p,20%) 100%)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;
+margin-top:-6px;border-radius:50%;background:var(--ac2);border:2px solid var(--panel)}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;
+background:var(--ac2);border:2px solid var(--panel)}
+#opts{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+#opts label{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;
+border-radius:999px;background:var(--ctrl);border:1px solid var(--bd);color:var(--mu);
+font-size:14px;cursor:pointer;transition:background-color .12s,color .12s,border-color .12s}
+#opts label:hover{background:var(--ctrl2);color:var(--tx)}
+#opts input{accent-color:var(--ac);width:17px;height:17px;margin:0;cursor:pointer}
+#opts label:has(:checked){background:var(--ctrl2);color:var(--tx);border-color:var(--bd2)}
+#opts label[data-c=u]:has(:checked){box-shadow:inset 3px 0 0 var(--up)}
+#opts label[data-c=n]:has(:checked){box-shadow:inset 3px 0 0 var(--nu)}
+#opts label[data-c=s]:has(:checked){box-shadow:inset 3px 0 0 var(--sy)}
+#pw{margin-bottom:10px;padding:16px 14px;min-height:62px;display:flex;align-items:center;
+justify-content:center;flex-wrap:wrap;background:var(--well);border:1px solid var(--bd);
+border-radius:10px;font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+font-size:19px;letter-spacing:.5px;word-break:break-all;cursor:pointer;user-select:all}
+#pw:hover{border-color:var(--bd2)}
+.lo{color:var(--lo)}.up{color:var(--up)}.nu{color:var(--nu)}.sy{color:var(--sy)}
+#st{display:flex;align-items:center;gap:10px;margin-bottom:18px;font-size:12px}
+#tr{flex:1;height:6px;border-radius:99px;background:var(--ctrl2);overflow:hidden}
+#fi{height:100%;width:0;border-radius:99px;transition:width .18s,background-color .18s}
+#lb{min-width:9em;text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.btns{display:flex;gap:10px}
+button{flex:1;min-height:46px;padding:0 16px;font-size:15px;font-weight:700;cursor:pointer;
+border-radius:10px;border:1px solid var(--bd2);background:var(--ctrl);color:var(--tx);
+transition:background-color .12s,border-color .12s}
+button:hover{background:var(--ctrl2)}
+button:active{transform:translateY(1px)}
+#gen{background:var(--ac);border-color:var(--ac);color:#fff}
+#gen:hover{background:var(--ach);border-color:var(--ach)}
+#cp.ok{background:var(--good);border-color:var(--good);color:#04231a}
+:focus-visible{outline:2px solid var(--ac2);outline-offset:2px}
+@media (max-width:460px){.card{padding:20px 16px}.btns{flex-direction:column}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main class="card">
+<h1>Password Generator</h1>
+<div class="row">
+<label for="len">Length</label>
+<input type="range" id="len" min="6" max="64" value="16" oninput="upd()">
+<span id="val">16</span>
+</div>
+<div id="opts">
+<label data-c="u"><input type="checkbox" id="u" checked onchange="gen()"> A-Z</label>
+<label data-c="n"><input type="checkbox" id="n" checked onchange="gen()"> 0-9</label>
+<label data-c="s"><input type="checkbox" id="s" checked onchange="gen()"> !@#</label>
+</div>
+<div id="pw" tabindex="0" role="textbox" aria-readonly="true" aria-live="polite"
+aria-label="Generated password" onclick="sel()"></div>
+<div id="st"><div id="tr"><div id="fi"></div></div><span id="lb"></span></div>
+<div class="btns">
+<button type="button" id="gen" onclick="gen()">Generate</button>
+<button type="button" id="cp" onclick="cp()">Copy</button>
+</div>
+</main>
+<script>
+"use strict";
+var L="abcdefghijklmnopqrstuvwxyz",U="ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+    N="0123456789",S="!@#$%^&*()-_=+[]{};:,.<>?";
+// uniform in [0,m) via rejection sampling - no modulo bias
+function ri(m){if(m<1)return 0;var lim=Math.floor(4294967296/m)*m,b=new Uint32Array(1),v;
+do{crypto.getRandomValues(b);v=b[0]}while(v>=lim);return v%m}
+function pk(s){return s[ri(s.length)]}
+// Fisher-Yates. A sort() with a random comparator is NOT uniform - measured
+// 304% positional bias, which pushed guaranteed chars to the front.
+function sh(a){for(var i=a.length-1;i>0;i--){var j=ri(i+1),t=a[i];a[i]=a[j];a[j]=t}return a}
+function cls(c){return c>="a"&&c<="z"?"lo":c>="A"&&c<="Z"?"up":c>="0"&&c<="9"?"nu":"sy"}
+function gen(){
+  var n=+document.getElementById("len").value,p=L,req=[];
+  if(document.getElementById("u").checked){p+=U;req.push(pk(U))}
+  if(document.getElementById("n").checked){p+=N;req.push(pk(N))}
+  if(document.getElementById("s").checked){p+=S;req.push(pk(S))}
+  var a=req.slice();
+  while(a.length<n)a.push(pk(p));
+  a.length=n; sh(a);
+  var pw=a.join(""),box=document.getElementById("pw"),f=document.createDocumentFragment();
+  box.textContent="";
+  for(var i=0;i<pw.length;i++){var e=document.createElement("span");
+    e.className=cls(pw[i]);e.textContent=pw[i];f.appendChild(e)}
+  box.appendChild(f); box.dataset.pw=pw;
+  var bits=pw.length*Math.log2(p.length),c,t;
+  if(bits<50){c="var(--weak)";t="Weak"}
+  else if(bits<75){c="var(--fair)";t="Fair"}
+  else if(bits<110){c="var(--good)";t="Strong"}
+  else{c="var(--best)";t="Very strong"}
+  var fi=document.getElementById("fi");
+  fi.style.width=Math.min(100,bits/140*100)+"%"; fi.style.backgroundColor=c;
+  var lb=document.getElementById("lb");
+  lb.textContent=t+" \u00b7 "+Math.round(bits)+" bits"; lb.style.color=c;
+  var b=document.getElementById("cp"); b.textContent="Copy"; b.classList.remove("ok");
+}
+function upd(){var e=document.getElementById("len");
+  document.getElementById("val").textContent=e.value;
+  e.style.setProperty("--p",(e.value-e.min)/(e.max-e.min)*100+"%"); gen()}
+function sel(){var r=document.createRange();r.selectNodeContents(document.getElementById("pw"));
+  var s=window.getSelection();s.removeAllRanges();s.addRange(r)}
+function cp(){
+  var t=document.getElementById("pw").dataset.pw||"";if(!t)return;
+  var done=function(ok){var b=document.getElementById("cp");
+    b.textContent=ok?"Copied":"Ctrl+C";if(ok)b.classList.add("ok");
+    setTimeout(function(){b.textContent="Copy";b.classList.remove("ok")},1400)};
+  if(navigator.clipboard&&navigator.clipboard.writeText)
+    navigator.clipboard.writeText(t).then(function(){done(1)},function(){done(lg(t))});
+  else done(lg(t));
+}
+function lg(t){var a=document.createElement("textarea");a.value=t;
+  a.style.cssText="position:fixed;top:-9999px";document.body.appendChild(a);a.select();
+  var ok=0;try{ok=document.execCommand("copy")}catch(e){}
+  document.body.removeChild(a);sel();return ok}
+document.addEventListener("keydown",function(e){
+  if(e.key==="Enter"&&document.activeElement.id==="pw"){e.preventDefault();gen()}});
+upd();
+</script>
+</body>
+</html>
